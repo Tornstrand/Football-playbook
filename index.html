@@ -2,18 +2,31 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Football Playbook</title>
+  <title>Football Playbook Creator</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div id="controls">
-    <button id="addPlayer">Add player</button>
-    <select id="lineType">
-      <option value="route">Route</option>
-      <option value="block">Block</option>
+    <input type="text" id="playName" placeholder="Spelnamn" />
+    <select id="roleSelect">
+      <option value="QB">QB</option>
+      <option value="RB">RB</option>
+      <option value="WR">WR</option>
+      <option value="TE">TE</option>
+      <option value="OL">OL</option>
+      <option value="DL">DL</option>
+      <option value="LB">LB</option>
+      <option value="CB">CB</option>
+      <option value="S">S</option>
     </select>
+    <button id="addPlayer">Lägg till spelare</button>
+    <button id="routeMode">Rita route</button>
+    <button id="savePlay">Spara spel</button>
+    <button id="loadPlay">Ladda spel</button>
   </div>
-  <canvas id="field" width="800" height="400"></canvas>
+  <ul id="playList"></ul>
+  <canvas id="field" width="960" height="480"></canvas>
   <script src="script.js"></script>
 </body>
 </html>
+

@@ -1,15 +1,50 @@
 body {
   font-family: sans-serif;
+  background-color: #f4f4f4;
   text-align: center;
 }
 
 #controls {
-  margin-bottom: 10px;
+  margin: 10px auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+
+button,
+select,
+input {
+  padding: 5px 8px;
+}
+
+button.active {
+  background-color: #ffd700;
+}
+
+#playList {
+  list-style: none;
+  padding: 0;
+  margin: 10px auto;
+  max-width: 300px;
+  text-align: left;
+}
+
+#playList li {
+  padding: 4px 8px;
+  border: 1px solid #ccc;
+  background: #fff;
+  margin-bottom: 4px;
+  cursor: pointer;
+}
+
+#playList li:hover {
+  background: #eee;
 }
 
 #field {
-  border: 1px solid #ccc;
-  background-color: #ffffff;
+  border: 2px solid #333;
+  background-color: #0B6623;
   display: block;
   margin: 0 auto;
 }
