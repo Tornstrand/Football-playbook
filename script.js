@@ -1,50 +1,71 @@
 const canvas = document.getElementById('field');
 const ctx = canvas.getContext('2d');
-const addBtn = document.getElementById('addPlayer');
-const lineTypeSelect = document.getElementById('lineType');
+const playNameInput = document.getElementById('playName');
+const roleSelect = document.getElementById('roleSelect');
+const addPlayerBtn = document.getElementById('addPlayer');
+const routeModeBtn = document.getElementById('routeMode');
+const savePlayBtn = document.getElementById('savePlay');
+const loadPlayBtn = document.getElementById('loadPlay');
+const playListEl = document.getElementById('playList');
 
-const players = [];
+let players = [];
 let selectedPlayer = null;
-let dragPlayer = null;
+let draggingPlayer = null;
 let dragOffsetX = 0;
 let dragOffsetY = 0;
-let dragging = false;
+let routeMode = false;
 
 class Player {
-  constructor(x, y, name) {
+  constructor(x, y, role) {
     this.x = x;
     this.y = y;
-    this.name = name;
-    this.routes = [];
+    this.role = role;
+    this.route = [];
+  }
+
+  get side() {
+    const offense = ['QB', 'RB', 'WR', 'TE', 'OL', 'FB', 'C', 'G', 'T'];
+    return offense.includes(this.role) ? 'offense' : 'defense';
   }
 
   draw() {
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 10, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
+    ctx.arc(this.x, this.y, 12, 0, Math.PI * 2);
+    ctx.fillStyle = this.side === 'offense' ? '#1E90FF' : '#FF4136';
     ctx.fill();
-    ctx.strokeStyle = 'black';
+    ctx.lineWidth = selectedPlayer === this ? 3 : 1;
+    ctx.strokeStyle = selectedPlayer === this ? '#FFD700' : '#000000';
     ctx.stroke();
 
-    ctx.fillStyle = 'black';
+    ctx.fillStyle = '#ffffff';
     ctx.font = '12px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(this.name, this.x, this.y - 15);
+    ctx.fillText(this.role, this.x, this.y + 4);
 
-    this.routes.forEach(r => drawLine(this.x, this.y, r.x, r.y, r.type));
+    if (this.route.length) {
+      ctx.strokeStyle = '#FFD700';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(this.x, this.y);
+      this.route.forEach(p => ctx.lineTo(p.x, p.y));
+      ctx.stroke();
+    }
   }
 }
 
 function drawField() {
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = '#0B6623';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.strokeStyle = 'black';
+  ctx.strokeStyle = '#ffffff';
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height / 2);
-  ctx.lineTo(canvas.width, canvas.height / 2);
-  ctx.stroke();
+  const lines = 12;
+  for (let i = 0; i <= lines; i++) {
+    const x = (canvas.width / lines) * i;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, canvas.height);
+    ctx.stroke();
+  }
 }
 
 function redraw() {
@@ -52,115 +73,131 @@ function redraw() {
   players.forEach(p => p.draw());
 }
 
-addBtn.addEventListener('click', () => {
-  const name = prompt('Player name', `Player ${players.length + 1}`) || `Player ${players.length + 1}`;
-  const p = new Player(canvas.width / 2, canvas.height / 2, name);
+function getMousePos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+}
+
+addPlayerBtn.addEventListener('click', () => {
+  const role = roleSelect.value;
+  const p = new Player(canvas.width / 2, canvas.height / 2, role);
   players.push(p);
   redraw();
 });
 
-canvas.addEventListener('mousedown', e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+routeModeBtn.addEventListener('click', () => {
+  routeMode = !routeMode;
+  routeModeBtn.classList.toggle('active', routeMode);
+});
 
-  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 10);
+savePlayBtn.addEventListener('click', saveCurrentPlay);
+
+loadPlayBtn.addEventListener('click', () => {
+  const name = playNameInput.value.trim();
+  if (name) loadPlayByName(name);
+});
+
+canvas.addEventListener('mousedown', e => {
+  if (routeMode) return;
+  const { x, y } = getMousePos(e);
+  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 12);
   if (hit) {
-    dragPlayer = hit;
+    draggingPlayer = hit;
     selectedPlayer = hit;
     dragOffsetX = x - hit.x;
     dragOffsetY = y - hit.y;
-  }
-});
-
-canvas.addEventListener('mousemove', e => {
-  if (!dragPlayer) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  dragPlayer.x = x - dragOffsetX;
-  dragPlayer.y = y - dragOffsetY;
-  dragging = true;
-  redraw();
-});
-
-canvas.addEventListener('mouseup', () => {
-  dragPlayer = null;
-  setTimeout(() => (dragging = false), 0);
-});
-
-canvas.addEventListener('click', e => {
-  if (dragging) return;
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-
-  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 10);
-  if (hit) {
-    selectedPlayer = hit;
-    return;
-  }
-
-  if (selectedPlayer) {
-    selectedPlayer.routes.push({ x, y, type: lineTypeSelect.value });
-    selectedPlayer = null;
     redraw();
   }
 });
 
-canvas.addEventListener('dblclick', e => {
-  const rect = canvas.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 10);
-  if (hit) {
-    const newName = prompt('Player name', hit.name);
-    if (newName) {
-      hit.name = newName;
-      redraw();
+canvas.addEventListener('mousemove', e => {
+  if (!draggingPlayer) return;
+  const { x, y } = getMousePos(e);
+  const newX = x - dragOffsetX;
+  const newY = y - dragOffsetY;
+  const dx = newX - draggingPlayer.x;
+  const dy = newY - draggingPlayer.y;
+  draggingPlayer.x = newX;
+  draggingPlayer.y = newY;
+  draggingPlayer.route.forEach(pt => {
+    pt.x += dx;
+    pt.y += dy;
+  });
+  redraw();
+});
+
+canvas.addEventListener('mouseup', () => {
+  draggingPlayer = null;
+});
+
+canvas.addEventListener('click', e => {
+  if (draggingPlayer) return;
+  const { x, y } = getMousePos(e);
+  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 12);
+  if (routeMode) {
+    if (hit) {
+      selectedPlayer = hit;
+    } else if (selectedPlayer) {
+      selectedPlayer.route.push({ x, y });
     }
+    redraw();
+  } else {
+    selectedPlayer = hit || null;
+    redraw();
   }
 });
 
-function drawLine(x1, y1, x2, y2, type) {
-  ctx.strokeStyle = 'yellow';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
-  ctx.stroke();
-
-  if (type === 'route') {
-    drawArrow(x1, y1, x2, y2);
-  } else {
-    drawBlock(x1, y1, x2, y2);
+function saveCurrentPlay() {
+  const name = playNameInput.value.trim();
+  if (!name) {
+    alert('Ange spelnamn');
+    return;
   }
+  const play = {
+    name,
+    players: players.map(p => ({
+      x: p.x,
+      y: p.y,
+      role: p.role,
+      route: p.route
+    }))
+  };
+  const plays = JSON.parse(localStorage.getItem('plays') || '[]');
+  const existing = plays.findIndex(pl => pl.name === name);
+  if (existing >= 0) {
+    plays[existing] = play;
+  } else {
+    plays.push(play);
+  }
+  localStorage.setItem('plays', JSON.stringify(plays));
+  loadPlayList();
 }
 
-function drawArrow(x1, y1, x2, y2) {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
-  const len = 10;
-  ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(
-    x2 - len * Math.cos(angle - Math.PI / 6),
-    y2 - len * Math.sin(angle - Math.PI / 6)
-  );
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(
-    x2 - len * Math.cos(angle + Math.PI / 6),
-    y2 - len * Math.sin(angle + Math.PI / 6)
-  );
-  ctx.stroke();
+function loadPlayByName(name) {
+  const plays = JSON.parse(localStorage.getItem('plays') || '[]');
+  const play = plays.find(p => p.name === name);
+  if (!play) return;
+  playNameInput.value = play.name;
+  players = play.players.map(p => {
+    const pl = new Player(p.x, p.y, p.role);
+    pl.route = p.route || [];
+    return pl;
+  });
+  selectedPlayer = null;
+  redraw();
 }
 
-function drawBlock(x1, y1, x2, y2) {
-  const len = 10;
-  ctx.strokeStyle = 'black';
-  ctx.beginPath();
-  ctx.moveTo(x2 - len, y2);
-  ctx.lineTo(x2 + len, y2);
-  ctx.stroke();
+function loadPlayList() {
+  playListEl.innerHTML = '';
+  const plays = JSON.parse(localStorage.getItem('plays') || '[]');
+  plays.forEach(p => {
+    const li = document.createElement('li');
+    li.textContent = p.name;
+    li.addEventListener('click', () => loadPlayByName(p.name));
+    playListEl.appendChild(li);
+  });
 }
 
+loadPlayList();
 redraw();
+
