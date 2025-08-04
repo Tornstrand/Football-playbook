@@ -5,11 +5,16 @@ const lineTypeSelect = document.getElementById('lineType');
 
 const players = [];
 let selectedPlayer = null;
+let dragPlayer = null;
+let dragOffsetX = 0;
+let dragOffsetY = 0;
+let dragging = false;
 
 class Player {
-  constructor(x, y) {
+  constructor(x, y, name) {
     this.x = x;
     this.y = y;
+    this.name = name;
     this.routes = [];
   }
 
@@ -21,25 +26,21 @@ class Player {
     ctx.strokeStyle = 'black';
     ctx.stroke();
 
+    ctx.fillStyle = 'black';
+    ctx.font = '12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(this.name, this.x, this.y - 15);
+
     this.routes.forEach(r => drawLine(this.x, this.y, r.x, r.y, r.type));
   }
 }
 
 function drawField() {
-  ctx.fillStyle = '#2e7d32';
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  ctx.strokeStyle = 'white';
+  ctx.strokeStyle = 'black';
   ctx.lineWidth = 2;
-  const step = canvas.width / 12;
-  for (let i = 0; i <= 12; i++) {
-    const x = i * step;
-    ctx.beginPath();
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, canvas.height);
-    ctx.stroke();
-  }
-
   ctx.beginPath();
   ctx.moveTo(0, canvas.height / 2);
   ctx.lineTo(canvas.width, canvas.height / 2);
@@ -52,12 +53,44 @@ function redraw() {
 }
 
 addBtn.addEventListener('click', () => {
-  const p = new Player(canvas.width / 2, canvas.height / 2);
+  const name = prompt('Player name', `Player ${players.length + 1}`) || `Player ${players.length + 1}`;
+  const p = new Player(canvas.width / 2, canvas.height / 2, name);
   players.push(p);
   redraw();
 });
 
+canvas.addEventListener('mousedown', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+
+  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 10);
+  if (hit) {
+    dragPlayer = hit;
+    selectedPlayer = hit;
+    dragOffsetX = x - hit.x;
+    dragOffsetY = y - hit.y;
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  if (!dragPlayer) return;
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  dragPlayer.x = x - dragOffsetX;
+  dragPlayer.y = y - dragOffsetY;
+  dragging = true;
+  redraw();
+});
+
+canvas.addEventListener('mouseup', () => {
+  dragPlayer = null;
+  setTimeout(() => (dragging = false), 0);
+});
+
 canvas.addEventListener('click', e => {
+  if (dragging) return;
   const rect = canvas.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
@@ -72,6 +105,20 @@ canvas.addEventListener('click', e => {
     selectedPlayer.routes.push({ x, y, type: lineTypeSelect.value });
     selectedPlayer = null;
     redraw();
+  }
+});
+
+canvas.addEventListener('dblclick', e => {
+  const rect = canvas.getBoundingClientRect();
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
+  const hit = players.find(p => Math.hypot(p.x - x, p.y - y) < 10);
+  if (hit) {
+    const newName = prompt('Player name', hit.name);
+    if (newName) {
+      hit.name = newName;
+      redraw();
+    }
   }
 });
 
@@ -108,13 +155,11 @@ function drawArrow(x1, y1, x2, y2) {
 }
 
 function drawBlock(x1, y1, x2, y2) {
-  const angle = Math.atan2(y2 - y1, x2 - x1);
   const len = 10;
-  const bx = x2 - len * Math.sin(angle);
-  const by = y2 + len * Math.cos(angle);
+  ctx.strokeStyle = 'black';
   ctx.beginPath();
-  ctx.moveTo(x2, y2);
-  ctx.lineTo(bx, by);
+  ctx.moveTo(x2 - len, y2);
+  ctx.lineTo(x2 + len, y2);
   ctx.stroke();
 }
 
