@@ -1,0 +1,15 @@
+body {
+  font-family: sans-serif;
+  text-align: center;
+}
+
+#controls {
+  margin-bottom: 10px;
+}
+
+#field {
+  border: 1px solid #ccc;
+  background-color: #2e7d32;
+  display: block;
+  margin: 0 auto;
+}
